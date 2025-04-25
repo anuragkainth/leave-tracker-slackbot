@@ -4,19 +4,24 @@ const dayjs = require('dayjs');
 
 module.exports = async (event, say) => {
   const slackId = event.user;
-  const dates = parseDates(
-    event.text.replace(/cancel planned leave(?: on)?/i, '')
-  );
-  if (dates.length !== 1) return say('Please specify exactly one date to cancel.');
+  const dates   = parseDates(event.text);
+  if (!dates.length) return say('No valid dates to cancel.');
 
-  const dt = dayjs(dates[0]);
-  const rec = await Leave.findOne({ date: dt.toDate(), status: 'planned' })
-                         .populate('userId');
-  if (!rec || rec.userId.slackId !== slackId) {
-    return say(`No planned leave on ${dates[0]}`);
+  const msgs = [];
+  for (const iso of dates) {
+    const dt = dayjs(iso);
+    const rec = await Leave.findOne({ date: dt.toDate(), status: 'planned' })
+                           .populate('userId');
+    if (!rec) {
+      msgs.push(`No planned leave on ${iso}`);
+    } else if (rec.userId.slackId !== slackId) {
+      msgs.push(`Cannot cancel ${iso}: not your leave`);
+    } else {
+      rec.status = 'cancelled';
+      await rec.save();
+      msgs.push(`Cancelled ${iso}`);
+    }
   }
 
-  rec.status = 'cancelled';
-  await rec.save();
-  say(`Cancelled ${dates[0]}`);
+  return say(msgs.join('\n'));
 };

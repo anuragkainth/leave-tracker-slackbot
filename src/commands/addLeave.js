@@ -5,9 +5,7 @@ const dayjs = require('dayjs');
 
 module.exports = async (event, say) => {
   const slackId = event.user;
-  const dates = parseDates(
-    event.text.replace(/add planned leave/i, '')
-  );
+  const dates = parseDates(event.text);
   if (!dates.length) return say('No valid dates found.');
 
   const user = await User.findOneAndUpdate(
@@ -25,15 +23,16 @@ module.exports = async (event, say) => {
     }
     const exist = await Leave.findOne({
       userId: user._id,
-      date: d.toDate(),
-      status: 'planned'
+      date:  d.toDate(),
+      status:'planned'
     });
-    if (exist) msgs.push(`Already planned ${iso}`);
-    else {
+    if (exist) {
+      msgs.push(`Already planned ${iso}`);
+    } else {
       await Leave.create({ userId: user._id, date: d.toDate() });
       msgs.push(`Added ${iso}`);
     }
   }
 
-  say(msgs.join('\n'));
+  return say(msgs.join('\n'));
 };
