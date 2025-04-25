@@ -27,6 +27,20 @@ app.event('app_mention', async ({ event, say }) => {
   await say('Unknown command. Use `add/cancel/query planned leave`');
 });
 
+app.message(async ({ message, say }) => {
+  // ignore messages from bots
+  if (message.subtype === 'bot_message') return;
+
+  // channel_type 'im' = a direct message
+  if (message.channel_type === 'im') {
+    const text = message.text.trim().toLowerCase();
+    if (text.startsWith('add planned leave'))    return addLeave({ user: message.user, text }, say);
+    if (text.startsWith('cancel planned leave')) return cancelLeave({ user: message.user, text }, say);
+    if (text.startsWith('query planned leave'))  return queryLeave({ user: message.user, text }, say);
+    return say('Unknown command. Use `add/cancel/query planned leave`');
+  }
+});
+
 // 4) Start server + scheduler
 (async () => {
   await app.start();
