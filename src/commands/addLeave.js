@@ -5,7 +5,9 @@ const dayjs = require('dayjs');
 
 module.exports = async (event, say) => {
   const slackId = event.user;
-  const dates = parseDates(event.text.replace(/add planned leave/i, ''));
+  const dates = parseDates(
+    event.text.replace(/add planned leave/i, '')
+  );
   if (!dates.length) return say('No valid dates found.');
 
   const user = await User.findOneAndUpdate(

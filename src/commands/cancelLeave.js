@@ -4,7 +4,9 @@ const dayjs = require('dayjs');
 
 module.exports = async (event, say) => {
   const slackId = event.user;
-  const dates = parseDates(event.text.replace(/cancel planned leave on/i, ''));
+  const dates = parseDates(
+    event.text.replace(/cancel planned leave(?: on)?/i, '')
+  );
   if (dates.length !== 1) return say('Please specify exactly one date to cancel.');
 
   const dt = dayjs(dates[0]);
