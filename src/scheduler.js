@@ -1,6 +1,6 @@
 const cron = require('node-cron');
-const Leave = require('./models/leave');
 const dayjs = require('dayjs');
+const Leave = require('./models/leave');
 
 function formatSummary(records) {
   const byUser = {};
@@ -16,14 +16,17 @@ function formatSummary(records) {
 
 module.exports.start = (app) => {
   cron.schedule('0 9 * * *', async () => {
-    const today = dayjs();
-    const upcoming = dayjs().add(7, 'day');
-    const records = await Leave.find({ date: { $gte: today.toDate(), $lte: upcoming.toDate() }, status: 'planned' })
-      .populate('userId', 'slackId');
+    const today = dayjs().startOf('day');
+    const upcoming = today.add(7, 'day');
+    const records = await Leave.find({
+      date: { $gte: today.toDate(), $lte: upcoming.toDate() },
+      status: 'planned',
+    }).populate('userId', 'slackId');
+
     if (records.length) {
       await app.client.chat.postMessage({
         channel: process.env.SUMMARY_CHANNEL_ID,
-        text: '*Upcoming Leaves (Next 7 Days)*\n' + formatSummary(records)
+        text: '*Upcoming Leaves (Next 7 Days)*\n' + formatSummary(records),
       });
     }
   });
