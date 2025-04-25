@@ -5,6 +5,7 @@ const addLeave = require('./commands/addLeave');
 const cancelLeave = require('./commands/cancelLeave');
 const queryLeave = require('./commands/queryLeave');
 const scheduler = require('./scheduler');
+const summaryLeave = require('./commands/summaryLeave');
 
 // 1) Connect to MongoDB
 connectDb()
@@ -24,6 +25,7 @@ app.event('app_mention', async ({ event, say }) => {
   if (text.startsWith('add planned leave'))    return addLeave(event, say);
   if (text.startsWith('cancel planned leave')) return cancelLeave(event, say);
   if (text.startsWith('query planned leave'))  return queryLeave(event, say);
+  if (text.startsWith('summary planned leave')) return summaryLeave(event, say);
   await say('Unknown command. Use `add/cancel/query planned leave`');
 });
 
