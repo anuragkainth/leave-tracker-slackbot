@@ -15,7 +15,7 @@ function formatSummary(records) {
 }
 
 module.exports.start = (app) => {
-  cron.schedule('0 9 * * *', async () => {
+  cron.schedule('* * * * *', async () => {
     const today = dayjs().startOf('day');
     const upcoming = today.add(7, 'day');
     const records = await Leave.find({
