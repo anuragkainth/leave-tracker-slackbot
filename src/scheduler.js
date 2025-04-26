@@ -1,4 +1,5 @@
-const cron = require('node-cron');
+// src/scheduler.js
+const cron  = require('node-cron');
 const dayjs = require('dayjs');
 const Leave = require('./models/leave');
 
@@ -15,19 +16,27 @@ function formatSummary(records) {
 }
 
 module.exports.start = (app) => {
-  cron.schedule('0 9 * * *', async () => {
-    const today = dayjs().startOf('day');
-    const upcoming = today.add(7, 'day');
-    const records = await Leave.find({
-      date: { $gte: today.toDate(), $lte: upcoming.toDate() },
-      status: 'planned',
-    }).populate('userId', 'slackId');
+  // Runs every day at 09:00 Asia/Kolkata time
+  cron.schedule(
+    '0 9 * * *',                        // minute hour dayOfMonth month dayOfWeek
+    async () => {
+      const today    = dayjs().startOf('day').toDate();
+      const upcoming = dayjs().add(7, 'day').endOf('day').toDate();
 
-    if (records.length) {
-      await app.client.chat.postMessage({
-        channel: process.env.SUMMARY_CHANNEL_ID,
-        text: '*Upcoming Leaves (Next 7 Days)*\n' + formatSummary(records),
-      });
+      const records = await Leave.find({
+        date:   { $gte: today, $lte: upcoming },
+        status: 'planned',
+      }).populate('userId', 'slackId');
+
+      if (records.length) {
+        await app.client.chat.postMessage({
+          channel: process.env.SUMMARY_CHANNEL_ID,
+          text:    '*Upcoming Leaves (Next 7 Days)*\n' + formatSummary(records),
+        });
+      }
+    },
+    {
+      timezone: 'Asia/Kolkata'
     }
-  });
+  );
 };
