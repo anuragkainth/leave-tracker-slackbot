@@ -1,30 +1,49 @@
+// src/utils/dateParser.js
 const dayjs = require('dayjs');
 const customParseFormat = require('dayjs/plugin/customParseFormat');
 dayjs.extend(customParseFormat);
 
-const MONTHS = [
-  'January','February','March','April','May','June',
-  'July','August','September','October','November','December'
-];
+// Full month names
+const MONTHS = {
+  january:   'January', february: 'February', march:   'March',
+  april:     'April',   may:      'May',      june:    'June',
+  july:      'July',    august:   'August',   september:'September',
+  october:   'October', november: 'November', december:'December'
+};
+
+// Abbrev map (including 'sept')
+const ABBR = {
+  jan: 'Jan', feb: 'Feb', mar: 'Mar', apr: 'Apr',
+  may: 'May', jun: 'Jun', jul: 'Jul', aug: 'Aug',
+  sep: 'Sep', sept: 'Sep', oct: 'Oct', nov: 'Nov', dec: 'Dec'
+};
 
 function normalizeToken(token) {
   token = token.trim().toLowerCase();
-  // Remove any Slack mention tags
-  token = token.replace(/<@[^>]+>/g, '').trim();
-  // Insert space if missing between digit and letter, e.g. "29may"
-  token = token.replace(/(\d)([a-z])/gi, '$1 $2');
-  // Capitalize month words
-  MONTHS.forEach(mon => {
-    const lc = mon.toLowerCase();
-    token = token.replace(new RegExp(`\\b${lc}\\b`, 'i'), mon);
+  token = token.replace(/<@[^>]+>/g, '').trim();          // strip mentions
+  token = token.replace(/(\d)([a-z])/gi, '$1 $2');         // '29may' -> '29 may'
+
+  // fix abbreviations
+  Object.entries(ABBR).forEach(([k,v]) => {
+    const re = new RegExp(`\\b${k}\\b`, 'i');
+    token = token.replace(re, v);
   });
+
+  // fix full month names to Title Case
+  Object.entries(MONTHS).forEach(([k,v]) => {
+    const re = new RegExp(`\\b${k}\\b`, 'i');
+    token = token.replace(re, v);
+  });
+
   return token;
 }
 
 function parseDates(input) {
-  // Remove the command phrase if present
+  // strip leading command words
   input = input.replace(/^(add|cancel|query)?\s*planned\s*leave(?:\s*on)?/i, '').trim();
-  // Split on commas or the word "and"
+  if (!input) return [];
+
+  // split on commas or 'and'
   const parts = input.split(/\s*(?:,|and)\s*/i);
   const dates = new Set();
 
@@ -32,10 +51,10 @@ function parseDates(input) {
     if (!raw) return;
     const token = normalizeToken(raw);
 
-    // Range support: "15-17 May" or "15–17 May"
-    const rangeMatch = token.match(/^(\d{1,2})\s*[-–]\s*(\d{1,2})\s+([A-Za-z]+)$/);
-    if (rangeMatch) {
-      const [, start, end, month] = rangeMatch;
+    // range e.g. "15-17 May"
+    const m = token.match(/^(\d{1,2})\s*[-–]\s*(\d{1,2})\s+([A-Za-z]+)$/);
+    if (m) {
+      const [ , start, end, month ] = m;
       for (let d = +start; d <= +end; d++) {
         const txt = `${d} ${month}`;
         const dt = dayjs(txt, ['D MMM', 'D MMMM', 'YYYY-MM-DD'], true);
@@ -44,7 +63,7 @@ function parseDates(input) {
       return;
     }
 
-    // Single date
+    // single date
     const dt = dayjs(token, ['D MMM', 'D MMMM', 'YYYY-MM-DD'], true);
     if (dt.isValid()) {
       dates.add(dt.format('YYYY-MM-DD'));
